@@ -11,6 +11,12 @@
 
 4. Train a predictor, and test to see its performance on predicting the correctness of intermediate/final answers at the answer positions.
 
+## A word of caution (write before): 
+
+1. In order to run with more nodes, I split the entire dataset into several job-arrays and submit them together. Of course, you can modify this part according to your own habits (or according to the total amount of other datasets).  -- this part (about separate data to run) should be easy to find in the code.
+
+2. I saved the results for every middle-phase (you will know what I mean when looking down). So when running any follow-up phase, don't forget to parser-in the path for previous saved files. (Of course, if you are used to putting them together/ignore middle-phase profiles/.., feel free to modify it by yourself)
+
 
 ## S1. Run each question on model to get the CoT generated
 
