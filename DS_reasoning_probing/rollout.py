@@ -247,11 +247,11 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, default="/home/test/test05/cyl/models/Llama-3.1-8B")
     parser.add_argument("--data_name", type=str, default="math_500")
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--run_number", type=int, default=1)
+    parser.add_argument("--run_number", type=int, default=1, help="Number of runs")
     parser.add_argument("--start_run", type=int, default=0)
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--base_model", action="store_true")
+    parser.add_argument("--base_model", action="store_true", help="if true, use `Q: A:` as chat template")
     parser.add_argument("--append_str", type=str, default=None)
 
 
