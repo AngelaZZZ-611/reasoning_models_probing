@@ -72,6 +72,7 @@ def get_metrics(val_labels, val_preds):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--train_data_dir', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/profile_CoT_generation/embeds_intermediate_answers/train_dataset_MATH', help='train data path.') # train-set
     parser.add_argument('--test_data_dir', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/profile_CoT_generation/embeds_intermediate_answers/test_dataset_MATH', help='test data path.') # test-set
     parser.add_argument('--epochs', type=int, default=200,
                         help='number of the uper-bound epochs to train the model ')
