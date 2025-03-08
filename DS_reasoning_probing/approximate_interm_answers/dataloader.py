@@ -40,7 +40,7 @@ class OptimizedBinaryClassificationDataset(IterableDataset):
             random.shuffle(files)
         # don't shuffle if is for the test dataset
         for fp in files:
-            print(fp)
+            # print(fp)
             try:
                 data = torch.load(fp)
                 # Process one sample at a time
