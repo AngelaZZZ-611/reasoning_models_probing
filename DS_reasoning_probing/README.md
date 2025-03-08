@@ -28,6 +28,11 @@ python -u .../CoT_generation.py --st ${SLURM_ARRAY_TASK_ID} --cache_dir "note:mo
 ```
 > for running faster, I split the data into job-arrays (but also depends on how many gpus are avaiable to use). Anyway, feel free to change this part when you run experiments.
 
+See `rollout.sh` for faster inference with vllm library. Install the lib before run.
+- Note: probably need to adjust max_new_token and other parameter to cater for reasoning models.
+```bash
+pip install vllm
+```
 
 ## S2. Split reasoning paths and label them
 
