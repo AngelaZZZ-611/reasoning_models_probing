@@ -9,36 +9,11 @@ from transformers import (
     AutoTokenizer,
 )
 from math_eval_tools.main import evaluate as evaluate_math, last_boxed_only_string
-from utils import evaluate_mc
+from utils import evaluate_mc, load_jsonl
 import json
 from datasets import load_dataset
 import numpy as np
-
-def load_jsonl(
-    file_path,
-    instruction="instruction",
-    input="input",
-    output="output",
-    category="category",
-    is_gzip=False,
-):
-    # Format of each line:
-    # {'instruction': ..., 'input': ..., 'output':...}
-    list_data_dict = []
-    open_func = open if not is_gzip else gzip.open
-    with open_func(file_path, "r") as f:
-        for line in f:
-            item = json.loads(line)
-            new_item = dict(
-                instruction=item[instruction] if instruction in item else None,
-                input=item[input] if input in item else None,
-                output=item[output] if output in item else None,
-                category=item[category] if category in item else None,
-            )
-            item = new_item
-            list_data_dict.append(item)
-    return list_data_dict
-
+from transformers import LlamaTokenizerFast as LlamaTokenizer
 
 def seed_everything(seed: int):
     import random
@@ -54,11 +29,7 @@ def seed_everything(seed: int):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
-def concat_text(text_a, text_b):
-    if isinstance(text_a, list):
-        assert isinstance(text_b, list)
-        return [a + " " + b.strip() + " " for a, b in zip(text_a, text_b)]
-    return text_a + " " + text_b.strip() + " "
+
 
 def generate_answer(model, input_text, temperature=0.7, full_r1=False):
     ###############
@@ -69,7 +40,7 @@ def generate_answer(model, input_text, temperature=0.7, full_r1=False):
     #################
 
     
-    generate_kwargs = dict(max_new_tokens=5000, temperature=temperature, do_sample=True if temperature > 0.0 else False)
+    generate_kwargs = dict(max_new_tokens=16000, temperature=temperature, do_sample=True if temperature > 0.0 else False)
     generated = generation_func(model, input_text, generate_kwargs)
     return generated
 
@@ -147,21 +118,35 @@ def build_prompt(input_text, tokenizer=None, cot=False, base_model=False, append
     elif tokenizer is None or not tokenizer.chat_template or base_model:
         input_text_prompt = "Question: " + input_text + "\n" + "Answer: "
     else:
-        input_text_prompt = tokenizer.apply_chat_template(
-            [
-                {
-                    "role": "system",
-                    # "content": "You are a helpful and harmless assistant. You are Qwen developed by Alibaba. You should think step-by-step."
-                    "content": "Please reason step by step, and put your final answer within \\boxed{{}}."
-                },
-                {
-                "role": "user",
-                "content": input_text
-            }
-            ],
-            add_generation_prompt=True,
-            tokenize=False
-        )
+        if isinstance(tokenizer, LlamaTokenizer):
+            instruction_following = "\nPlease reason step by step, and put your final answer within \\boxed{}."
+            input_text_prompt = tokenizer.apply_chat_template(
+                [
+                    {
+                        "role": "user",
+                        "content": input_text + instruction_following
+                    }
+                ],
+                add_generation_prompt=True,
+                tokenize=False
+            )
+        else:
+            # ****** Default to Qwen System Prompt ******
+            input_text_prompt = tokenizer.apply_chat_template(
+                [
+                    {
+                        "role": "system",
+                        # "content": "You are a helpful and harmless assistant. You are Qwen developed by Alibaba. You should think step-by-step."
+                        "content": "Please reason step by step, and put your final answer within \\boxed{{}}."
+                    },
+                    {
+                    "role": "user",
+                    "content": input_text
+                }
+                ],
+                add_generation_prompt=True,
+                tokenize=False
+            )
     # if cot:
     #     input_text_prompt += "Let's think step by step. "
     # if add_think_tokens:
@@ -192,7 +177,7 @@ def load_data(data_name="gsm8k", split=None, debug=False):
     elif data_name == "math":
         new_dataset = []
         for category in ['algebra', 'counting_and_probability', 'geometry', 'intermediate_algebra', 'number_theory', 'prealgebra', 'precalculus']:
-            dataset = load_dataset("/scratch/yc7320/hf_dataset/MATH", category, split=split)
+            dataset = load_dataset("/home/test/test05/cyl/moe_eval_dataset/MATH", category, split=split)
             for item in dataset:
                 item["instruction"] = item["problem"]
                 item["answer"] = last_boxed_only_string(item["solution"])
@@ -205,14 +190,33 @@ def load_data(data_name="gsm8k", split=None, debug=False):
             new_dataset = new_dataset[:10]
         return new_dataset
     elif data_name == "math_500":
-        raise NotImplementedError
+        # raise NotImplementedError
         new_dataset = []
-        dataset = load_dataset("HuggingFaceH4/MATH-500")["test"]
+        dataset = load_dataset("./data/MATH-500")["test"]
         for item in dataset:
             item["instruction"] = item["problem"]
             item.pop("problem")
             new_dataset.append(item)
         return new_dataset
+    elif data_name == "aime_83_24":
+        list_of_dict = []
+        dataset = load_dataset("./data/aime-1983-2024")["train"]
+        # print(dataset.keys())
+        for item in dataset:
+            item["instruction"] = item["Question"]
+            item["answer"] = item["Answer"]
+            item.pop("Question")
+            item.pop("Answer")
+            list_of_dict.append(item)
+        return list_of_dict 
+    elif data_name == "aime_25":
+        list_of_dict = []
+        dataset = load_dataset("./data/aime25")["test"]
+        for item in dataset:
+            item["instruction"] = item["problem"]
+            item.pop("problem")
+            list_of_dict.append(item)
+        return list_of_dict 
     elif data_name == "aime_2024":
         raise NotImplementedError
         new_dataset = []
@@ -247,7 +251,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, default="/home/test/test05/cyl/models/Llama-3.1-8B")
     parser.add_argument("--data_name", type=str, default="math_500")
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--run_number", type=int, default=1, help="Number of runs")
     parser.add_argument("--start_run", type=int, default=0)
 
     parser.add_argument("--debug", action="store_true")
@@ -266,7 +269,6 @@ if __name__ == "__main__":
 
     model_path = args.model_path
     TEMPERATURE = args.temperature
-    RUN_NUMBER = args.run_number
 
     # model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16, device_map="auto")
     full_r1 = False
@@ -280,6 +282,7 @@ if __name__ == "__main__":
         model = LLM(model=model_path, tensor_parallel_size=torch.cuda.device_count(), gpu_memory_utilization=0.95, dtype=torch.float16)
         # tensor_parallel_size=torch.cuda.device_count(), 
         tokenizer = AutoTokenizer.from_pretrained(model_path)
+        
 
     
 
@@ -288,14 +291,16 @@ if __name__ == "__main__":
         if "@" in data_name:
             data_name, split = data_name.split("@")
 
-        if data_name == "gpqa_diamond":
-            evaluate_func = evaluate_mc
-        else:
-            evaluate_func = evaluate_math
+        # if data_name == "gpqa_diamond":
+        #     evaluate_func = evaluate_mc
+        # else:
+        #     evaluate_func = evaluate_math
 
         list_data_dict = load_data(data_name, split=split, debug=args.debug)
+        if args.debug:
+            list_data_dict = list_data_dict[:10]
 
-        print(f"Running {len(list_data_dict)} prompts with temperature={TEMPERATURE}, total {RUN_NUMBER} runs")
+        print(f"Running {len(list_data_dict)} prompts with temperature={TEMPERATURE}")
 
         model_name = model_path.split("/")[-1]
         data_name_tmp = data_name 
@@ -305,39 +310,36 @@ if __name__ == "__main__":
         if split is not None:
             setting = f"{model_name}_{data_name_tmp}-{split}_rollout_temperature{TEMPERATURE}"
         print(f"Setting: {setting}")
-        for run in range(args.start_run, RUN_NUMBER):
-            seed_everything(run)
-            if split is None:
-                filename = f"{setting}_run{run}"
-            else:
-                filename = f"{setting}_run{run}"
-            print(f"Running {run}th run: {filename}")
 
-            completions = []
-            answers = []
-            prompts = []
-            for sample in tqdm(list_data_dict):
-                input_text = build_prompt(sample["instruction"], tokenizer=tokenizer, full_r1=full_r1, base_model=args.base_model, append_str=args.append_str)
-                prompts.append(input_text)
-                answers.append(sample["answer"])
-            
-            print("####### Example of Prompts #######")
-            print("\n".join(prompts[0:5]))
-            print("##################################")
+        filename = setting
+        completions = []
+        answers = []
+        prompts = []
+        for sample in tqdm(list_data_dict):
+            input_text = build_prompt(sample["instruction"], tokenizer=tokenizer, full_r1=full_r1, base_model=args.base_model, append_str=args.append_str)
+            prompts.append(input_text)
+            answers.append(sample["answer"])
+        
+        print("####### Example of Prompts #######")
+        print(prompts[0])
+        print("##################################")
 
-            completions = generate_answer(model, prompts, temperature=TEMPERATURE, full_r1 = full_r1)
+        completions = generate_answer(model, prompts, temperature=TEMPERATURE, full_r1 = full_r1)
 
-            eval_results, model_answers, eval_results_summary = evaluate_func(completions=completions, answers=answers)
-            print(eval_results_summary)
-            output_file=f"./initial_rollout/{setting}_results.jsonl"
-            with open(output_file, "a+") as f:
-                f.write(json.dumps({"setting": setting, "run": run, **eval_results_summary}, default=convert_json) + "\n") 
+        # eval_results, model_answers, eval_results_summary = evaluate_func(completions=completions, answers=answers)
+        # print(eval_results_summary)
+        # output_file=f"./initial_rollout/{setting}_results.jsonl"
+        # with open(output_file, "a+") as f:
+        #     f.write(json.dumps({"setting": setting, "run": run, **eval_results_summary}, default=convert_json) + "\n") 
 
-            
-            with open(f"./initial_rollout/{filename}.jsonl", "w") as f:
-                for completion, answer, extracted_answer, res, example in zip(completions, answers, model_answers, eval_results, list_data_dict):
-                    f.write(json.dumps({"completion": completion, "top_logprobs": None, "extracted_model_answer": extracted_answer, "is_correct": res, **example}, default=convert_json) + "\n")
-    
+        
+        with open(f"./initial_cot/{filename}.jsonl", "w") as f:
+            for completion, answer, example in zip(completions, answers, list_data_dict):
+                if args.append_str is not None:
+                    completion = args.append_str + completion
+                f.write(json.dumps({"completion": completion, **example}, default=convert_json) + "\n")
+                
+    os.makedirs("./initial_cot", exist_ok=True)
     data_name_list = args.data_name.split(",")
     for data_name in data_name_list:
         main(data_name)
