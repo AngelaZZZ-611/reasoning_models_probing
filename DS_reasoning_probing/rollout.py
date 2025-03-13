@@ -40,7 +40,7 @@ def generate_answer(model, input_text, temperature=0.7, full_r1=False):
     #################
 
     
-    generate_kwargs = dict(max_new_tokens=16000, temperature=temperature, do_sample=True if temperature > 0.0 else False)
+    generate_kwargs = dict(max_new_tokens=32768, temperature=temperature, do_sample=True if temperature > 0.0 else False)
     generated = generation_func(model, input_text, generate_kwargs)
     return generated
 
@@ -291,10 +291,10 @@ if __name__ == "__main__":
         if "@" in data_name:
             data_name, split = data_name.split("@")
 
-        # if data_name == "gpqa_diamond":
-        #     evaluate_func = evaluate_mc
-        # else:
-        #     evaluate_func = evaluate_math
+        if data_name == "gpqa_diamond":
+            evaluate_func = evaluate_mc
+        else:
+            evaluate_func = evaluate_math
 
         list_data_dict = load_data(data_name, split=split, debug=args.debug)
         if args.debug:
@@ -326,7 +326,7 @@ if __name__ == "__main__":
 
         completions = generate_answer(model, prompts, temperature=TEMPERATURE, full_r1 = full_r1)
 
-        # eval_results, model_answers, eval_results_summary = evaluate_func(completions=completions, answers=answers)
+        eval_results, model_answers, eval_results_summary = evaluate_func(completions=completions, answers=answers)
         # print(eval_results_summary)
         # output_file=f"./initial_rollout/{setting}_results.jsonl"
         # with open(output_file, "a+") as f:
@@ -334,10 +334,10 @@ if __name__ == "__main__":
 
         
         with open(f"./initial_cot/{filename}.jsonl", "w") as f:
-            for completion, answer, example in zip(completions, answers, list_data_dict):
+            for completion, answer, res, model_answer, example in zip(completions, answers, eval_results, model_answers, list_data_dict):
                 if args.append_str is not None:
                     completion = args.append_str + completion
-                f.write(json.dumps({"completion": completion, **example}, default=convert_json) + "\n")
+                f.write(json.dumps({"completion": completion, "is_correct": res, "extracted_model_answer": model_answer, **example}, default=convert_json) + "\n")
                 
     os.makedirs("./initial_cot", exist_ok=True)
     data_name_list = args.data_name.split(",")
