@@ -55,13 +55,18 @@ python -u .../label_intermidiate_answers_api.py --st ${SLURM_ARRAY_TASK_ID} --se
 
 ## S3. Get the embedding vector of each input reasoning path.
 
-code: get_inter_ans_embeds.py
+code: get_inter_ans_embeds.py  (get_inter_ans_embeds-kvcache.py)
 
 ```bash
 #SBATCH --array=0-4
 python -u .../get_inter_ans_embeds.py --st ${SLURM_ARRAY_TASK_ID} --bs "note:batch-size" --cache_dir "note:model path" --dataset_path "note:data path" --save_path "note:save-file"
 ```
 > Merge chunks; Get the embedding of each input reasoning path; Labels are also contained in the final saved file.
+
+```bash
+python .../get_inter_ans_embeds-kvcache.py ...
+```
+> obtain the embedding of the last token for very long inputs without running into OOM errors, i.e., Chunked Processing with Key-Value Caching.
 
 ## S4. Train the predictor
 
