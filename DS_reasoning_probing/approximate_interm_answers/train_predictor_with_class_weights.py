@@ -48,7 +48,7 @@ def run_eval(args, epoch, model, criterion, val_loader):
             labels = labels.to(torch.float32)
             inputs, labels = inputs.to(device), labels.to(device)
             # Forward Pass
-            outputs = model(inputs).squeeze()
+            outputs = model(inputs).squeeze(-1)
             loss = criterion(outputs, labels)
             probs = torch.sigmoid(outputs)  # Apply Sigmoid for probabilities
             # preds = (probs > 0.5).float()   # Using 0.5 as threshold
@@ -153,7 +153,7 @@ def main():
             labels = labels.to(torch.float32)
             inputs, labels = inputs.to(device), labels.to(device)
             # Forward Pass
-            outputs = model(inputs).squeeze()  # No Sigmoid here
+            outputs = model(inputs).squeeze(-1)  # No Sigmoid here
             loss = criterion(outputs, labels)
             # Backward Pass and Optimization
             optimizer.zero_grad()
