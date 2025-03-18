@@ -2,3 +2,4 @@ __pycache__
 data
 processed_cot
 en_core_web_sm-3.8.0
+initial_cot/*-full.jsonl
