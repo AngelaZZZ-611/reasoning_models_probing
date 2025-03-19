@@ -1,0 +1,16 @@
+{"setting": "DeepSeek-R1-Distill-Qwen-7B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.4676923076923077, "correct": 608, "total": 1300, "format_error": 33}
+{"setting": "DeepSeek-R1-Distill-Qwen-7B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.48773006134969327, "correct": 159, "total": 326, "format_error": 7}
+{"setting": "QwQ-32B_math-train_rollout_temperature0.6", "total": 1000, "correct_num": 947, "accuracy": 0.947}
+{"setting": "DeepSeek-R1-Distill-Qwen-32B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.687, "correct": 687, "total": 1000, "format_error": 7}
+{"setting": "QwQ-32B_math_500_rollout_temperature0.6", "total": 500, "correct_num": 477, "accuracy": 0.954}
+{"setting": "DeepSeek-R1-Distill-Qwen-32B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.6748466257668712, "correct": 220, "total": 326, "format_error": 1}
+{"setting": "QwQ-32B_gsm8k-train_rollout_temperature0.6", "total": 1000, "correct_num": 972, "accuracy": 0.972}
+{"setting": "QwQ-32B_gsm8k-test_rollout_temperature0.6", "total": 1319, "correct_num": 1276, "accuracy": 0.9673995451099318}
+{"setting": "DeepSeek-R1-Distill-Llama-8B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.519, "correct": 519, "total": 1000, "format_error": 7}
+{"setting": "DeepSeek-R1-Distill-Llama-8B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.5153374233128835, "correct": 168, "total": 326, "format_error": 2}
+{"setting": "QwQ-32B_aime_83_24_rollout_temperature0.6", "total": 933, "correct_num": 842, "accuracy": 0.902465166130761}
+{"setting": "QwQ-32B_aime_25_rollout_temperature0.6", "total": 30, "correct_num": 23, "accuracy": 0.7666666666666667}
+{"setting": "QwQ-32B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.784, "correct": 784, "total": 1000, "format_error": 0}
+{"setting": "QwQ-32B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.7791411042944786, "correct": 254, "total": 326, "format_error": 0}
+{"setting": "DeepSeek-R1-Distill-Qwen-1.5B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.201, "correct": 201, "total": 1000, "format_error": 205}
+{"setting": "DeepSeek-R1-Distill-Qwen-1.5B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.18098159509202455, "correct": 59, "total": 326, "format_error": 64}
