@@ -14,3 +14,6 @@
 {"setting": "QwQ-32B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.7791411042944786, "correct": 254, "total": 326, "format_error": 0}
 {"setting": "DeepSeek-R1-Distill-Qwen-1.5B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.201, "correct": 201, "total": 1000, "format_error": 205}
 {"setting": "DeepSeek-R1-Distill-Qwen-1.5B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.18098159509202455, "correct": 59, "total": 326, "format_error": 64}
+{"setting": "DeepSeek-R1-Distill-Llama-70B_knowlogic-train_rollout_temperature0.6", "accuracy": 0.692, "correct": 692, "total": 1000, "format_error": 0}
+{"setting": "DeepSeek-R1-Distill-Llama-70B_knowlogic-test_rollout_temperature0.6", "accuracy": 0.7208588957055214, "correct": 235, "total": 326, "format_error": 0}
+{"setting": "QwQ-32B_gpqa_diamond_rollout_temperature0.6", "accuracy": 0.6565656565656566, "correct": 130, "total": 198, "format_error": 0}
