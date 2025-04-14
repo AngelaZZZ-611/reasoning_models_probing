@@ -79,7 +79,12 @@ def run_segmentation(args_dict):
     profile = {}
     for key in tqdm(chunk_data.keys()):
         # get the reasoning trace
-        reasoning_trace = chunk_data[key].split('<think>\n')[1].split('</think>')[0]
+        if "<think>" in chunk_data[key]:
+            reasoning_trace = chunk_data[key].split('<think>\n')[1].split('</think>')[0]
+        else:
+            if "</think>" not in chunk_data[key]:
+                print(f"Key {key} does not contain a proper reasoning trace.")
+            reasoning_trace = chunk_data[key].split("</think>")[0]
 
         # Split the reasoning trace
         chunks = split_reasoning_trace_with_matcher(reasoning_trace, highlight=args.highlight)

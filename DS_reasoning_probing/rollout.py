@@ -11,9 +11,10 @@ from transformers import (
 from math_eval_tools.main import evaluate as evaluate_math, last_boxed_only_string
 from utils import evaluate_mc, load_jsonl
 import json
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 import numpy as np
 from transformers import LlamaTokenizerFast as LlamaTokenizer
+from transformers import Qwen2Tokenizer
 
 def seed_everything(seed: int):
     import random
@@ -109,6 +110,7 @@ def build_gpqa_instruction(example) -> dict:
     answer = ANSWER_LABELS[ans_idx]
     example["instruction"] = prompt
     example["answer"] = answer
+    # example["answer"] = f"({answer}) {example['Correct Answer']}"
 
     return example
 
@@ -118,35 +120,36 @@ def build_prompt(input_text, tokenizer=None, cot=False, base_model=False, append
     elif tokenizer is None or not tokenizer.chat_template or base_model:
         input_text_prompt = "Question: " + input_text + "\n" + "Answer: "
     else:
-        if isinstance(tokenizer, LlamaTokenizer):
-            instruction_following = "\nPlease reason step by step, and put your final answer within \\boxed{}."
-            input_text_prompt = tokenizer.apply_chat_template(
-                [
-                    {
-                        "role": "user",
-                        "content": input_text + instruction_following
-                    }
-                ],
-                add_generation_prompt=True,
-                tokenize=False
-            )
-        else:
-            # ****** Default to Qwen System Prompt ******
-            input_text_prompt = tokenizer.apply_chat_template(
-                [
-                    {
-                        "role": "system",
-                        # "content": "You are a helpful and harmless assistant. You are Qwen developed by Alibaba. You should think step-by-step."
-                        "content": "Please reason step by step, and put your final answer within \\boxed{{}}."
-                    },
-                    {
+        # if isinstance(tokenizer, LlamaTokenizer) or isinstance(tokenizer, Qwen2Tokenizer):
+        instruction_following = "\nPlease reason step by step, and put your final answer within \\boxed{}."
+        input_text_prompt = tokenizer.apply_chat_template(
+            [
+                {
                     "role": "user",
-                    "content": input_text
+                    "content": input_text + instruction_following
                 }
-                ],
-                add_generation_prompt=True,
-                tokenize=False
-            )
+            ],
+            add_generation_prompt=True,
+            tokenize=False
+        )
+        # else:
+        #     raise NotImplementedError
+        #     # ****** Default to Qwen System Prompt ******
+        #     input_text_prompt = tokenizer.apply_chat_template(
+        #         [
+        #             {
+        #                 "role": "system",
+        #                 # "content": "You are a helpful and harmless assistant. You are Qwen developed by Alibaba. You should think step-by-step."
+        #                 "content": "Please reason step by step, and put your final answer within \\boxed{{}}."
+        #             },
+        #             {
+        #             "role": "user",
+        #             "content": input_text
+        #         }
+        #         ],
+        #         add_generation_prompt=True,
+        #         tokenize=False
+        #     )
     # if cot:
     #     input_text_prompt += "Let's think step by step. "
     # if add_think_tokens:
@@ -154,6 +157,28 @@ def build_prompt(input_text, tokenizer=None, cot=False, base_model=False, append
     if append_str is not None:
         input_text_prompt += append_str
     return input_text_prompt
+
+def build_knowlogic_instruction(example) -> dict:
+    example["orig_id"] = example["id"]
+    example.pop("id")
+    ANSWER_LABELS = ["A", "B", "C", "D"]
+    PROMPT_PREFIX = "Please choose the correct answer from among the following options to fill in the blank: \n"
+    assert len(example["answer"]) == 1, print(example)
+    example["answer"] = example["answer"][0]
+    assert example["answer"] in ANSWER_LABELS
+    example["instruction"] = example["question"]
+    assert len(example["options"]) == 4, print(example)
+
+    
+    
+    ordered_choices = [
+        f"({label}) {example['options'][label]}" for label in ANSWER_LABELS
+    ]
+
+    prompt = example["text"] + "\n" + "Question: " + example["question"] + "\n" + PROMPT_PREFIX + "\n".join(ordered_choices)
+    example["instruction"] = prompt
+    return example
+
 
 def load_data(data_name="gsm8k", split=None, debug=False):
     if data_name == "gsm8k":
@@ -173,6 +198,10 @@ def load_data(data_name="gsm8k", split=None, debug=False):
             item["answer"] = item["output"].split("####")[-1].strip()
         if debug:
             list_data_dict = list_data_dict[:10]
+        if split == "train":
+            # sample 1k
+            random.seed(42)
+            list_data_dict = list(random.sample(list_data_dict, 1000))
         return list_data_dict
     elif data_name == "math":
         new_dataset = []
@@ -188,6 +217,10 @@ def load_data(data_name="gsm8k", split=None, debug=False):
                 new_dataset.append(item)
         if debug:
             new_dataset = new_dataset[:10]
+        if split == "train":
+            # sample 1k
+            random.seed(42)
+            new_dataset = list(random.sample(new_dataset, 1000))
         return new_dataset
     elif data_name == "math_500":
         # raise NotImplementedError
@@ -235,11 +268,44 @@ def load_data(data_name="gsm8k", split=None, debug=False):
     #                 item.pop(k)
     #     return list_data_dict
     elif data_name == "gpqa_diamond":
-        raise NotImplementedError
+        # raise NotImplementedError
         ds = load_dataset("./data/gpqa", "gpqa_diamond")["train"]
         ds = ds.map(build_gpqa_instruction)
         ds = ds.select_columns(['instruction', 'answer', 'Correct Answer',"Record ID"])
         return ds.to_list()
+    elif data_name == "knowlogic":
+        def _filter(ds):
+            # en
+            # answer number = 1
+            new_ds = []
+            ans_num_err = 0
+            for item in ds:
+                if item["language"] != "en":
+                    continue
+                if len(item["answer"]) != 1:
+                    ans_num_err += 1
+                else:
+                    new_ds.append(item)
+            print(f"answer number error: {ans_num_err}")
+            return new_ds
+
+        assert split is not None
+        ds = load_dataset("./data/KnowLogic")["test"]
+        ds = _filter(ds)
+        print("total length:", len(ds))
+        random.seed(42)
+        random.shuffle(ds)
+        train_size = int(len(ds) * 0.8)
+        if split == "train":
+            ds = ds[:train_size]
+            if len(ds) > 1000:
+                ds = ds[:1000]
+
+        elif split == "test":
+            ds = ds[train_size:]
+        ds = Dataset.from_list(ds)
+        ds = ds.map(build_knowlogic_instruction)
+        return ds
     else:
         raise NotImplementedError
 
@@ -256,7 +322,7 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--base_model", action="store_true", help="if true, use `Q: A:` as chat template")
     parser.add_argument("--append_str", type=str, default=None)
-
+    parser.add_argument("--save_dir", type=str, default="./initial_cot")
 
     args = parser.parse_args()
 
@@ -291,7 +357,7 @@ if __name__ == "__main__":
         if "@" in data_name:
             data_name, split = data_name.split("@")
 
-        if data_name == "gpqa_diamond":
+        if data_name == "gpqa_diamond" or "knowlogic" in data_name.lower():
             evaluate_func = evaluate_mc
         else:
             evaluate_func = evaluate_math
@@ -323,23 +389,25 @@ if __name__ == "__main__":
         print("####### Example of Prompts #######")
         print(prompts[0])
         print("##################################")
+        # import sys
+        # sys.exit()
 
         completions = generate_answer(model, prompts, temperature=TEMPERATURE, full_r1 = full_r1)
 
         eval_results, model_answers, eval_results_summary = evaluate_func(completions=completions, answers=answers)
-        # print(eval_results_summary)
-        # output_file=f"./initial_rollout/{setting}_results.jsonl"
-        # with open(output_file, "a+") as f:
-        #     f.write(json.dumps({"setting": setting, "run": run, **eval_results_summary}, default=convert_json) + "\n") 
+        print(eval_results_summary)
+        output_file = os.path.join(args.save_dir, "results.jsonl")
+        with open(output_file, "a+") as f:
+            f.write(json.dumps({"setting": setting, **eval_results_summary}, default=convert_json) + "\n") 
 
         
-        with open(f"./initial_cot/{filename}.jsonl", "w") as f:
+        with open(os.path.join(args.save_dir, f"{filename}.jsonl"), "w") as f:
             for completion, answer, res, model_answer, example in zip(completions, answers, eval_results, model_answers, list_data_dict):
                 if args.append_str is not None:
                     completion = args.append_str + completion
                 f.write(json.dumps({"completion": completion, "is_correct": res, "extracted_model_answer": model_answer, **example}, default=convert_json) + "\n")
                 
-    os.makedirs("./initial_cot", exist_ok=True)
+    os.makedirs(args.save_dir, exist_ok=True)
     data_name_list = args.data_name.split(",")
     for data_name in data_name_list:
         main(data_name)
