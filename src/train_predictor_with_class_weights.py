@@ -13,6 +13,15 @@ import argparse
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
+hs_dict = {
+        "DeepSeek-R1-Distill-Qwen-32B": 5120,
+        "DeepSeek-R1-Distill-Qwen-1.5B": 1536,
+        "DeepSeek-R1-Distill-Qwen-7B": 3584,
+        "DeepSeek-R1-Distill-Llama-8B": 4096,
+        "DeepSeek-R1-Distill-Llama-70B": 8192,
+        "QwQ-32B": 5120
+    }
+
 # In your MLP Model, remove Sigmoid activation from the output layer
 class MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -79,8 +88,7 @@ def save_checkpoint(args, epoch, model, optimizer, loss):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_data_dir', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/profile_CoT_generation/embeds_intermediate_answers/train_dataset_MATH', help='train data path.') # train-set
-    # parser.add_argument('--test_data_dir', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/profile_CoT_generation/embeds_intermediate_answers/test_dataset_MATH', help='test data path.') # train-set
+    parser.add_argument('--train_data_dir', type=str, default=None, help='train data path.') # train-set
     parser.add_argument('--epochs', type=int, default=200,
                         help='number of the uper-bound epochs to train the model ')
     parser.add_argument('--batch_size', type=int, default=64)
@@ -92,8 +100,8 @@ def main():
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--alpha_imbalance_penalty', type=float, default=None)
     parser.add_argument('--threshold', type=float, default=0.5)
-    parser.add_argument('--save_model_path', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/approximate_interm_answers/profile/grid_search/checkpoints', help='path for saving the best model. ') 
-    parser.add_argument('--store_path', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/approximate_interm_answers/profile/grid_search/store', help='path for saving profile. ') 
+    parser.add_argument('--save_model_path', type=str, default=None, help='path for saving the best model. ') 
+    parser.add_argument('--store_path', type=str, default=None, help='path for saving profile. ') 
     parser.add_argument('--model_name', type=str, default=None, help='path for saving the best model. ') 
 
     args = parser.parse_args()
@@ -121,14 +129,7 @@ def main():
 
     # Model parameters
     # input_size = args.input_size #X.shape[1]
-    hs_dict = {
-        "DeepSeek-R1-Distill-Qwen-32B": 5120,
-        "DeepSeek-R1-Distill-Qwen-1.5B": 1536,
-        "DeepSeek-R1-Distill-Qwen-7B": 3584,
-        "DeepSeek-R1-Distill-Llama-8B": 4096,
-        "DeepSeek-R1-Distill-Llama-70B": 8192,
-        "QwQ-32B": 5120
-    }
+    
     input_size = hs_dict[args.model_name]
     hidden_size = args.hidden_size #0/16/32/1024
     output_size = args.output_size  # Binary output

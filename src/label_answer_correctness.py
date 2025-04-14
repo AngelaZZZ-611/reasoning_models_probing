@@ -14,7 +14,7 @@ from tqdm import tqdm
 import json
 import glob
 from multiprocessing import Pool, cpu_count
-# Set your OpenAI API key as an environment variable 
+# Set your Gemini API key as an environment variable 
 # os.environ["GEMINI_API_KEY"] = "" #"your_api_key_here" 
 
 

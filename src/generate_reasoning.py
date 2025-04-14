@@ -8,8 +8,10 @@ from tqdm import tqdm
 from transformers import (
     AutoTokenizer,
 )
+import sys
+sys.path.append("../")
 from math_eval_tools.main import evaluate as evaluate_math, last_boxed_only_string
-from utils import evaluate_mc, load_jsonl
+from utils import evaluate_mc
 import json
 from datasets import load_dataset
 import numpy as np
@@ -171,10 +173,11 @@ if __name__ == "__main__":
     parser.add_argument("--data_name", type=str, default="math_500")
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--start_run", type=int, default=0)
-
+    parser.add_argument("--max_example", type=int, default=-1)
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--base_model", action="store_true", help="if true, use `Q: A:` as chat template")
     parser.add_argument("--append_str", type=str, default=None)
+    parser.add_argument("--save_path", type=str, default="./initial_cot")
     args = parser.parse_args()
 
     def convert_json(obj):
@@ -205,6 +208,8 @@ if __name__ == "__main__":
         list_data_dict = load_data(data_name, split=split, debug=args.debug)
         if args.debug:
             list_data_dict = list_data_dict[:10]
+        if args.max_example != -1:
+            list_data_dict = list_data_dict[:args.max_example]
 
         print(f"Running {len(list_data_dict)} prompts with temperature={TEMPERATURE}")
 
@@ -240,7 +245,7 @@ if __name__ == "__main__":
 
         # unify id for each example
         global_id = 0
-        with open(f"./initial_cot/{filename}.jsonl", "w") as f:
+        with open(os.path.join(args.save_path, f"{filename}.jsonl"), "w") as f:
             for completion, answer, res, model_answer, example in zip(completions, answers, eval_results, model_answers, list_data_dict):
                 if args.append_str is not None:
                     completion = args.append_str + completion
@@ -248,7 +253,7 @@ if __name__ == "__main__":
                     example.pop("id")
                 f.write(json.dumps({"completion": completion, "is_correct": res, "extracted_model_answer": model_answer, "id": f"{data_name}-{global_id}", **example}, default=convert_json) + "\n")
                 global_id += 1
-    os.makedirs("./initial_cot", exist_ok=True)
+    os.makedirs(args.save_path, exist_ok=True)
     data_name_list = args.data_name.split(",")
     for data_name in data_name_list:
         main(data_name)

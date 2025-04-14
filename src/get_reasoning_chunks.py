@@ -17,7 +17,7 @@ import glob
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 # Load spaCy English model (ensure you have 'en_core_web_sm' installed)
-nlp = spacy.load("./en_core_web_sm-3.8.0/en_core_web_sm/en_core_web_sm-3.8.0")
+nlp = spacy.load("en_core_web_sm")
 # nltk.download('punkt')
 # nltk.download('punkt_tab')
 
@@ -112,10 +112,14 @@ def load_data_file(datafile_path):
         add_id = False
         with open(datafile_path, 'r') as f:
             json_data = [json.loads(line) for line in f.readlines()]
+
+            # downsample the data to 1k examples
+            if len(json_data) > 1000:
+                json_data = json_data[:1000]
             for line in json_data:
                 if "id" not in line:
                     add_id = True
-                    line["id"] = i
+                    line["id"] = str(i)
                     i += 1
                 data[line["id"]] = line['completion']
         if add_id:
@@ -176,8 +180,8 @@ def merge_chunk_files(save_path, datafile_path, delete_chunks=False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--datafile_path', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/profile_CoT_generation/raw_CoT/train_dataset_MATH', help='raw CoT file path.')
-    parser.add_argument('--save_path', type=str, default='/scratch/az1658/CoT_explain/20250207_R1_CoT/profile_CoT_generation/segemented/train_dataset_MATH', help='save path for the segmented CoTs.')
+    parser.add_argument('--datafile_path', type=str, default=None, help='raw CoT file path.')
+    parser.add_argument('--save_path', type=str, default=None, help='save path for the segmented CoTs.')
     parser.add_argument('--num_processes', type=int, default=None, help='Number of processes to use. Defaults to number of CPU cores.')
     parser.add_argument('--num_chunks', type=int, default=None, help='Number of chunks to split the data into. Defaults to number of processes.')
     parser.add_argument('--highlight', type=bool, default=False, help='whether to highlight the customized transition marker. Just used for debugging purpose.')

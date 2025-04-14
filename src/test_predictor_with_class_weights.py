@@ -17,6 +17,15 @@ import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
+hs_dict = {
+        "DeepSeek-R1-Distill-Qwen-32B": 5120,
+        "DeepSeek-R1-Distill-Qwen-1.5B": 1536,
+        "DeepSeek-R1-Distill-Qwen-7B": 3584,
+        "DeepSeek-R1-Distill-Llama-8B": 4096,
+        "DeepSeek-R1-Distill-Llama-70B": 8192,
+        "QwQ-32B": 5120
+    }
+
 # In your MLP Model, remove Sigmoid activation from the output layer
 class MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -181,14 +190,7 @@ def main():
 
     # Model parameters
     # input_size = args.input_size #X.shape[1]
-    hs_dict = {
-        "DeepSeek-R1-Distill-Qwen-32B": 5120,
-        "DeepSeek-R1-Distill-Qwen-1.5B": 1536,
-        "DeepSeek-R1-Distill-Qwen-7B": 3584,
-        "DeepSeek-R1-Distill-Llama-8B": 4096,
-        "DeepSeek-R1-Distill-Llama-70B": 8192,
-        "QwQ-32B": 5120
-    }
+    
     input_size = hs_dict[args.model_name]
     hidden_size = args.hidden_size #0/16/32/1024
     output_size = args.output_size  # Binary output

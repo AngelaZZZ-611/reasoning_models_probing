@@ -94,7 +94,7 @@ def get_train_loader(train_files):
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=64,
-        num_workers=8,          # Match this to your CPU core count
+        num_workers=4,          # Match this to your CPU core count
         prefetch_factor=2,      # Prefetch 2 batches per worker
         pin_memory=True,        # Faster transfer to GPU
         persistent_workers=True # Keep workers alive between epochs

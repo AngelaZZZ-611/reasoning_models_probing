@@ -1,0 +1,9 @@
+__pycache__
+data
+processed_cot
+en_core_web_sm-3.8.0
+initial_cot/*-full.jsonl
+archive_data
+analysis_code
+*.zip
+*.gz
