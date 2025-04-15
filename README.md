@@ -42,14 +42,6 @@ pip install google-genai  # For labeling with Gemini API
 
 
 ## Train Your Own Probe
-The pipeline consists of several key steps:
-1. Generate Chain-of-Thought (CoT) reasoning paths using language models
-2. Extract and segment intermediate answers
-3. Label the correctness of intermediate answers using Gemini API
-4. Generate hidden state representations for reasoning segments
-5. Train a probe to predict reasoning correctness
-
-Below are the detailed steps to run the whole pipeline by yourself.
 
 ### Data Preparation
 #### 1. Generate CoT Reasoning
@@ -82,13 +74,13 @@ python src/get_reasoning_chunks.py \
     --datafile_path "$DATAFILE_PATH" \
     --save_path "$SAVE_PATH" \
     --num_processes "$NUM_PROCESSES" \
-    --delete_chunks  # Optional: delete intermediate chunks after merging
+    --delete_chunks  # delete intermediate chunks after merging
 ```
 
 #### 3. Label Intermediate Answers
 Extract and label the correctness of intermediate answers in each chunk, meanwhile merging chunks that does not contain an answer with later chunks to ensure each chunk as an intermediate answer.
 
-Not that we use Gemini API. You can also modify the [script](src/label_answer_correctness.py) to use other large language models for labeling.
+Note that we use Gemini API to extract and label the answers. You can also modify the [script](src/label_answer_correctness.py) to use other large language models for labeling.
 
 ```bash
 # Set your Gemini API key
@@ -109,7 +101,7 @@ python src/label_answer_correctness.py \
 ```
 
 #### 4. Generate Hidden State Representations
-Extract hidden state representations for each reasoning chunk:
+Extract hidden state representations for each reasoning chunk. Note that to save space, we control `chunk_size` for how many chunk representations are stored in each file.
 
 ```bash
 # Set variables

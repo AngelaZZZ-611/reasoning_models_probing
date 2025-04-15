@@ -156,3 +156,13 @@ def last_boxed_only_string(string):
     return string[left_brace_idx + 1: right_brace_idx].strip()
 
 
+def process_json_output(output):
+    json_string = output.replace('```json\n', '').replace('\n```', '')
+    json_string = json_string.replace('None', 'null')
+    json_string = json_string.replace('False', 'false')
+    json_string = json_string.replace('True', 'true')
+    try:
+        json_object = json.loads(json_string)
+        return json_object
+    except:
+        return None

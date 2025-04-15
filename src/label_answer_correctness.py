@@ -14,6 +14,7 @@ from tqdm import tqdm
 import json
 import glob
 from multiprocessing import Pool, cpu_count
+from utils import process_json_output
 # Set your Gemini API key as an environment variable 
 # os.environ["GEMINI_API_KEY"] = "" #"your_api_key_here" 
 
@@ -54,6 +55,15 @@ def run_LLM(args, client, reasoning_trace, gt_answer):
 
 
 # response.text = '```json\n[\n  {"id": "1", "result": "5/3", "correctness": null},\n  {"id": "2", "result": "14/3", "correctness": true},\n  {"id": "3", "result": "14/3", "correctness": true},\n  {"id": "4", "result": null, "correctness": null},\n  {"id": "5", "result": null, "correctness": null},\n  {"id": "6", "result": null, "correctness": null},\n  {"id": "7", "result": "14/3", "correctness": true},\n  {"id": "8", "result": null, "correctness": null},\n  {"id": "9", "result": "\\\\dfrac{14}{3}", "correctness": true}\n]\n```'
+
+def load_id2data(file_path):
+    id2data = {}
+    with open(file_path, 'r') as f:
+        for line in f:
+            item = json.loads(line)
+            id2data[str(item['id'])] = item
+    return id2data
+
 
 def load_id2answer(file_path):
     id2ans = {}
@@ -99,18 +109,33 @@ def single_process(args_dict):
         reasoning_trace = id2reasoning[k]
         gt_answer = id2ans[str(k)]
         out_res = run_LLM(args, client, reasoning_trace, gt_answer)
-
+        out_res = process_json_output(out_res.text)
+        if out_res is None:
+            print(f"Error processing output for {k}")
+            continue
         results[k] = out_res
     
-        # print(results)
-        # return
-    
-    # save results
-    torch.save(results, f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_chunk_{chunk_id}.pt')
-    # with open(f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_chunk_{chunk_id}.json', 'w') as f:
-    #     json.dump(results, f)
-    print(f"Processed and saved chunk {chunk_id} with {len(id2ans)} items")
     return results
+
+def merge_reasoning_chunks(reasoning_chunks, labels):
+    # reasoning_chunks:  list[str]
+    # labels: list[dict]
+    # return: list[str], list[dict]
+    # merge reasoning chunks to make sure each new chunk has a label[correctness] that is not None
+    assert len(reasoning_chunks) == len(labels), "Length of reasoning chunks and labels do not match"
+    current_chunk = []
+    all_merged_reasoning_chunks = []
+    all_merged_labels = []
+    labels = sorted(labels, key=lambda x: int(x["id"]))
+    for label in labels:
+        current_chunk.append(reasoning_chunks[label["id"]])
+        if label["correctness"] is not None:
+            all_merged_reasoning_chunks.append("\n\n".join(current_chunk))
+            label.pop("id")
+            all_merged_labels.append(label)
+            current_chunk = []
+    return all_merged_reasoning_chunks, all_merged_labels
+
 
 
 def main():
@@ -134,6 +159,7 @@ def main():
 
     id2ans = load_id2answer(args.raw_CoT_path)
     print(len(id2ans))
+
     id2reasoning = json.load(open(args.segmented_dataset_path))
     id2reasoning = {str(k): v for k, v in id2reasoning.items()}
     print(len(id2reasoning))
@@ -163,18 +189,35 @@ def main():
         all_res.update(result)
     print(f"Processed {len(all_res)} total items")
 
+    # process results
+    id2data = load_id2data(args.raw_CoT_path)
+    labeled_data = {}
+    for k in all_res:
+        reasoning_chunks, labels = merge_reasoning_chunks(id2reasoning[k], all_res[k]['labels'])
+        labeled_data[k] = {
+            "id": k,
+            "question": id2data[k]['instruction'],
+            "answer": id2data[k]['answer'],
+            "reasoning_chunks": reasoning_chunks,
+            "correctness_labels": labels,
+        }
+        
+    # save labeled data
+    with open(f'{args.save_path}/labeled_intermediate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}.jsonl', 'w') as f:
+        for k in labeled_data:
+            f.write(json.dumps(labeled_data[k], ensure_ascii=False) + "\n")
     # Save results
-    torch.save(all_res, f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_merged.pt')
+    # torch.save(all_res, f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_merged.pt')
 
     # remove the intermediate chunk files
-    if args.delete_chunks:
-        for i in range(num_chunks):
-            try:
-                file_ = f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_chunk_{i}.pt'
-                os.remove(file_)
-            except Exception as e:
-                print(f"Error deleting chunk file {i}: {e}")
-    print("All done!")
+    # if args.delete_chunks:
+    #     for i in range(num_chunks):
+    #         try:
+    #             file_ = f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_chunk_{i}.pt'
+    #             os.remove(file_)
+    #         except Exception as e:
+    #             print(f"Error deleting chunk file {i}: {e}")
+    # print("All done!")
 
     
 

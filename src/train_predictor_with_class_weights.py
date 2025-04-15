@@ -7,43 +7,12 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from dataloader import *
 import numpy as np
 import argparse
-
+from probe_model import load_model,  hs_dict
 
 # Check GPU availability
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
-hs_dict = {
-        "DeepSeek-R1-Distill-Qwen-32B": 5120,
-        "DeepSeek-R1-Distill-Qwen-1.5B": 1536,
-        "DeepSeek-R1-Distill-Qwen-7B": 3584,
-        "DeepSeek-R1-Distill-Llama-8B": 4096,
-        "DeepSeek-R1-Distill-Llama-70B": 8192,
-        "QwQ-32B": 5120
-    }
-
-# In your MLP Model, remove Sigmoid activation from the output layer
-class MLP(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(MLP, self).__init__()
-        self.hidden = nn.Linear(input_size, hidden_size)
-        self.output = nn.Linear(hidden_size, output_size)  # No Sigmoid here
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = self.hidden(x)
-        x = self.relu(x)
-        x = self.output(x)  # Raw logits
-        return x
-
-class Linear_Model(nn.Module):
-    def __init__(self, input_size, output_size):
-        super(Linear_Model, self).__init__()
-        self.output = nn.Linear(input_size, output_size)  # No Sigmoid here
-
-    def forward(self, x):
-        x = self.output(x)  # Raw logits
-        return x
 
 def run_eval(args, epoch, model, criterion, val_loader):
     print(f'======validating epoch {epoch+1}======')
@@ -133,10 +102,8 @@ def main():
     input_size = hs_dict[args.model_name]
     hidden_size = args.hidden_size #0/16/32/1024
     output_size = args.output_size  # Binary output
-    if args.hidden_size==0:
-        model = Linear_Model(input_size, output_size)
-    else:
-        model = MLP(input_size, hidden_size, output_size)
+
+    model = load_model(input_size, hidden_size, output_size)
     model.to(device)
 
     # Define loss function with calculated pos_weight

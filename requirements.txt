@@ -1,0 +1,9 @@
+numpy
+torch
+pandas
+spacy
+vllm
+transformers
+tqdm
+google-genai 
+bitsandbytes

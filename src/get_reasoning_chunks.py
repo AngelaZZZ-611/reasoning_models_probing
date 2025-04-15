@@ -1,16 +1,9 @@
 import torch
-import numpy as np
 import argparse
 import random
 import json
-import re
-import pandas as pd
 import os
-# from find_intermidiate_answers import split_reasoning_trace_with_matcher
-
-import nltk
 import spacy
-from nltk.tokenize import sent_tokenize
 from spacy.matcher import Matcher
 import json
 import glob

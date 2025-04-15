@@ -12,42 +12,11 @@ import sys
 sys.path.append("../grid_search/")
 from compute_metrics import process_file
 import os
-
+from probe_model import load_model, hs_dict
 # Check GPU availability
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
-hs_dict = {
-        "DeepSeek-R1-Distill-Qwen-32B": 5120,
-        "DeepSeek-R1-Distill-Qwen-1.5B": 1536,
-        "DeepSeek-R1-Distill-Qwen-7B": 3584,
-        "DeepSeek-R1-Distill-Llama-8B": 4096,
-        "DeepSeek-R1-Distill-Llama-70B": 8192,
-        "QwQ-32B": 5120
-    }
-
-# In your MLP Model, remove Sigmoid activation from the output layer
-class MLP(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(MLP, self).__init__()
-        self.hidden = nn.Linear(input_size, hidden_size)
-        self.output = nn.Linear(hidden_size, output_size)  # No Sigmoid here
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = self.hidden(x)
-        x = self.relu(x)
-        x = self.output(x)  # Raw logits
-        return x
-
-class Linear_Model(nn.Module):
-    def __init__(self, input_size, output_size):
-        super(Linear_Model, self).__init__()
-        self.output = nn.Linear(input_size, output_size)  # No Sigmoid here
-
-    def forward(self, x):
-        x = self.output(x)  # Raw logits
-        return x
 
 def run_eval(args, model, criterion, val_loader):
     model.eval()
@@ -83,14 +52,7 @@ def get_metrics(val_labels, val_preds):
     macro_f1 = f1_score(val_labels, val_preds, average='macro')
     return accuracy, precision, recall, f1, macro_f1
 
-def load_model(input_size, hidden_size, output_size, ckpt_weight=None):
-    if hidden_size==0:
-        model = Linear_Model(input_size, output_size)
-    else:
-        model = MLP(input_size, hidden_size, output_size)
-    if ckpt_weight is not None:
-        model.load_state_dict(ckpt_weight)
-    return model
+
 
 def load_loss_func(pos_weight, alpha_imbalance_penalty):
     if pos_weight is None:
@@ -197,10 +159,6 @@ def main():
     
 
 
-    
-    # learning_rate = args.lr #1e-4 #0.001
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=args.wd) # Start with a moderate LR
-
     # load checkpoint model (e.g., the best model)
     if args.checkpoint_model_path:
         if args.checkpoint_model_path[-3:] == '.pt':
@@ -233,7 +191,8 @@ def main():
 
         print(f"Loading checkpoint from {ckpt}")
         base_ckpt_name = ckpt.split('/')[-1]
-        hidden_size = int(base_ckpt_name.split('-')[1][2:])
+        # identify hidden size from the model file name by matching the pattern "-hs{hidden_size}-"
+        hidden_size = int(base_ckpt_name.split("-hs")[-1].split("-")[0])
         ckpt_weights = torch.load(ckpt)
         
         if "pos_weight_from_train" in ckpt_weights:
@@ -243,11 +202,11 @@ def main():
             print(f"Positive Class Weight: {pos_weight}")
             ckpt_weights = ckpt_weights["model"]
         # assert pos_weight is not None, "Please provide the positive class weight for the model"
-        model = load_model(input_size, hidden_size, output_size, ckpt_weights)
-        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        model = load_model(input_size, hidden_size, output_size, ckpt_weights=ckpt_weights)
         model.to(device)
 
-        alpha_imbalance_penalty = base_ckpt_name.split('-')[-3][5:]
+        # identify alpha imbalance penalty from the model file name by matching the pattern "-alpha{alpha_imbalance_penalty}-"
+        alpha_imbalance_penalty = base_ckpt_name.split('-alpha')[-1].split('-')[0]
         if alpha_imbalance_penalty == "None":
             alpha_imbalance_penalty = None
         else:
@@ -255,20 +214,6 @@ def main():
         criterion = load_loss_func(pos_weight, alpha_imbalance_penalty)
 
         profile = {'val': {}, 'test': {}}
-        # #### run test on validation dataset
-        # val_labels, val_preds, val_probs, val_loss = run_eval(args, model, criterion, val_loader=val_loader)
-
-        # # Convert to NumPy arrays for metrics
-        # profile['val']['val_labels'] = np.array(val_labels)
-        # profile['val']['val_preds']= np.array(val_preds)
-        # profile['val']['val_probs'] = np.array(val_probs)
-        # profile['val']['val_loss'] = np.array(val_loss)
-
-        # # Calculate Metrics
-        # accuracy, precision, recall, f1 = get_metrics(val_labels, val_preds)
-        # profile['val']['metrics'] = {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1': f1}
-        # print(f"=======Validation set========")
-        # print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}; loss: {val_loss:.4f}")
 
         #### run test on the test dataset
         test_loader = get_test_loader(args.test_data_dir)
@@ -324,4 +269,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-#python test_predictor_with_class_weights.py --lr 1e-05 --wd 0.001 --hidden_size 0 --alpha_imbalance_penalty 2.0 

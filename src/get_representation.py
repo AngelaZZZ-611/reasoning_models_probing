@@ -42,34 +42,18 @@ def create_bnb_config():
 
 def preprocess_data(args, labeled_profile):
     preprocessed_dataset = []
-    not_finished_examples = []
     sorted_keys = list(sorted(labeled_profile.keys()))
     for k in sorted_keys:
-        output = labeled_profile[k].text
-        # convert the JSON formatted text string into a JSON object
-        try:
-            json_string = output.replace('```json\n', '').replace('\n```', '')
-            json_string = json_string.replace('None', 'null')
-            json_string = json_string.replace('False', 'false')
-            json_string = json_string.replace('True', 'true')
-            json_object = json.loads(json_string)
-            # preprocessed_dataset[k] = []
-        except:
-            not_finished_examples.append(k)
-            continue  # for these examples, record the idx, and later run-label by using a longer gen-length
+        json_object = labeled_profile[k]
         ## merge chunks
-        init = 1
         end = -999
         last_one = len(json_object)
         for i in range(len(json_object)):
-            if json_object[i]['correctness'] != None:
+            if json_object[i]['correctness'] is not None:
                 end = json_object[i]['id']
                 correctness = json_object[i]['correctness']
-                # dict = {'id': k, 'range': [str(init), end], 'correctness': correctness, 'last_one': last_one}
                 dict = {'id': k, 'interm_pos': end, 'correctness': correctness, 'last_one': last_one}
                 preprocessed_dataset.append(dict)
-                # init = int(end) + 1
-    print(not_finished_examples)
     return preprocessed_dataset
 
 
@@ -85,7 +69,6 @@ def get_batch_embeddings(args, model, tokenizer, data, orig_data, preprocessed_d
         batch_prompts = []
         for j in range(len(batch_collector)):
             data_id = batch_collector[j]['id']
-            # id_range = batch_collector[j]['range']
             interm_pos = batch_collector[j]['interm_pos']
             correctness = batch_collector[j]['correctness']
             # Generate a list of consecutive integers
@@ -93,6 +76,7 @@ def get_batch_embeddings(args, model, tokenizer, data, orig_data, preprocessed_d
             # merge steps into a string with \n\n
             merged_text = "\n\n".join([data[data_id][key] for key in keys_to_merge]) +"\n\n" 
             # recover previous full-formatted text (i.e., keep same with the one in generation)
+            # TODO: flexible template
             prompt = f"{orig_data[str(data_id)]['instruction']}" + "\nPlease reason step by step, and put your final answer within \\boxed{}."
 
             # just maunally make sure this is exactly same format with the one during raw CoT generation
