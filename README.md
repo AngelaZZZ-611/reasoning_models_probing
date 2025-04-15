@@ -3,38 +3,26 @@
 
 <div align="center">
   
-[📄 Paper](https://arxiv.org/pdf/2504.05419) | [🤗 Model]() | [🤗 Data]()
+[📄 Paper](https://arxiv.org/pdf/2504.05419) | [Model](https://drive.usercontent.google.com/download?id=140GPBMca27-hAL5P8phK_jl2O9mReqo8&export=download&authuser=1&confirm=t&uuid=2302ab95-eb89-444e-aeed-8738a2c1d8b2&at=APcmpoyoq2GkpsrhGUK9W6EpyYoO:17446852776) | [🤗 Data]()
 
 </div>
 
 Official code for ["Reasoning Models Know When They're Right: Probing Hidden States for Self-Verification"](https://arxiv.org/pdf/2504.05419) 
 
-This repository contains code for probing hidden states of language models to predict the correctness of their intermediate answers. Our work shows that reasoning models inherently possess the capability to verify their own reasoning, with this information encoded in their hidden states.
+
+![](./figures/main.png)
 
 ## Table of Contents
 
-- [Project Overview](#project-overview)
+
 - [Setup and Requirements](#setup-and-requirements)
 - [Download Trained Probes](#download-trained-probes)
-- [Running the Pipeline](#running-the-pipeline)
-  - [1. Generate CoT Reasoning](#1-generate-cot-reasoning) 
-  - [2. Extract Reasoning Chunks](#2-extract-reasoning-chunks)
-  - [3. Label Intermediate Answers](#3-label-intermediate-answers)
-  - [4. Generate Hidden State Representations](#4-generate-hidden-state-representations)
-  - [5. Train Probes](#5-train-probs)
-  - [6. Test Probes](#6-test-probes)
+- [Train Your Own Probe](#train-your-own-probe)
+  - [Data Preparation](#data-preparation) 
+  - [Train Probes](#train-probs)
+  - [Test Probes](#test-probes)
 
 
-
-
-## Project Overview
-
-Our pipeline consists of several key components:
-1. Generate Chain-of-Thought (CoT) reasoning paths using language models
-2. Extract and segment intermediate reasoning steps
-3. Label the correctness of intermediate answers using Gemini API
-4. Generate hidden state representations for reasoning segments
-5. Train a linear probe to predict reasoning correctness
 
 
 ## Setup and Requirements
@@ -46,38 +34,26 @@ pip install google-genai  # For labeling with Gemini API
 ```
 
 ## Download Trained Probes
-We provide trained probes for different model and dataset combinations. You can download them using the links below:
-
-| Model | Dataset | Download Link |
-|-------|---------|---------------|
-| DeepSeek-R1-Distill-Llama-8B | MATH | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Llama-8B | GSM8K | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Llama-8B | AIME | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Llama-8B | KnowLogic | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-1.5B | MATH | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-1.5B | GSM8K | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-1.5B | AIME | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-1.5B | KnowLogic | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-7B | MATH | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-7B | GSM8K | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-7B | AIME | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-7B | KnowLogic | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-32B | MATH | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-32B | GSM8K | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-32B | AIME | 🤗 Coming soon  |
-| DeepSeek-R1-Distill-Qwen-32B | KnowLogic | 🤗 Coming soon |
-| QwQ-32B | MATH | 🤗 Coming soon  |
-| QwQ-32B | GSM8K | 🤗 Coming soon  |
-| QwQ-32B | AIME | 🤗 Coming soon  |
-| QwQ-32B | KnowLogic | 🤗 Coming soon  |
+- We provide trained probes for different model and dataset combinations. You can download them [here](https://drive.usercontent.google.com/download?id=140GPBMca27-hAL5P8phK_jl2O9mReqo8&export=download&authuser=1&confirm=t&uuid=2302ab95-eb89-444e-aeed-8738a2c1d8b2&at=APcmpoyoq2GkpsrhGUK9W6EpyYoO:17446852776).
+    - the downloaded file contains a series of trained probe `pt` file.
+    - the naming of each `pt` file follows `{model_name}_{train_data}_best_probe-{hyperparam_setting}.pt`
+- If you want to use the probe off-the-shelf on other data, we recommend using the probe trained on **MATH** data as they usually show better generalizability.
+- See for how to [prepare your own test data](#data-preparation) and how to [evaluate the probe](#test-probes). 
 
 
-## Running the Pipeline
+## Train Your Own Probe
+The pipeline consists of several key steps:
+1. Generate Chain-of-Thought (CoT) reasoning paths using language models
+2. Extract and segment intermediate answers
+3. Label the correctness of intermediate answers using Gemini API
+4. Generate hidden state representations for reasoning segments
+5. Train a probe to predict reasoning correctness
 
-Below are the detailed steps to run the pipeline using DeepSeek-R1-Distill-Qwen-1.5B on the MATH dataset.
+Below are the detailed steps to run the whole pipeline by yourself.
 
-### 1. Generate CoT Reasoning
-Generate Chain-of-Thought reasoning for each math problem:
+### Data Preparation
+#### 1. Generate CoT Reasoning
+Generate Chain-of-Thought reasoning for each example in your dataset.
 
 ```bash
 # Set model path
@@ -92,8 +68,8 @@ python -u src/generate_reasoning.py \
     --max_example 1000 # optional
 ```
 
-### 2. Extract Reasoning Chunks
-Process the CoT outputs to identify intermediate reasoning steps:
+#### 2. Extract Reasoning Chunks
+Process the CoT outputs to identify reasoning chunks:
 
 ```bash
 # Set variables
@@ -109,8 +85,10 @@ python src/get_reasoning_chunks.py \
     --delete_chunks  # Optional: delete intermediate chunks after merging
 ```
 
-### 3. Label Intermediate Answers
-Label the correctness of intermediate answers using Gemini API:
+#### 3. Label Intermediate Answers
+Extract and label the correctness of intermediate answers in each chunk, meanwhile merging chunks that does not contain an answer with later chunks to ensure each chunk as an intermediate answer.
+
+Not that we use Gemini API. You can also modify the [script](src/label_answer_correctness.py) to use other large language models for labeling.
 
 ```bash
 # Set your Gemini API key
@@ -130,8 +108,8 @@ python src/label_answer_correctness.py \
     --delete_chunks
 ```
 
-### 4. Generate Hidden State Representations
-Extract hidden state representations for each reasoning segment:
+#### 4. Generate Hidden State Representations
+Extract hidden state representations for each reasoning chunk:
 
 ```bash
 # Set variables
@@ -151,9 +129,8 @@ for chunk_id in {1..50}; do
         --chunk_size 200
 done
 ```
-
-### 5. Train Probes
-Train and evaluate the probe for predicting reasoning correctness:
+### Train Probes
+Train the probe for predicting answer correctness. Do grid search over each hyperparameter.
 
 ```bash
 # Set paths
@@ -163,10 +140,10 @@ export TRAIN_DATA_PATH=./model_embeds/${MODEL}_${DATA}
 
 
 
-# Run grid search to find optimal hyperparameters
-bash grid_search.sh
+# Run default grid search to find optimal hyperparameters
+bash train_probe.sh
 
-# Train with best parameters (example configuration)
+# OR Train with best parameters (example configuration)
 python -u ./src/train_predictor_with_class_weights.py \
     --epochs 200 \
     --lr 1e-5 \
@@ -180,34 +157,32 @@ python -u ./src/train_predictor_with_class_weights.py \
     --model_name $MODEL
 ```
 
-- For data and models used in our paper, you can replicate the results with best hyperparameters for each combination as below:
+For data and models used in our paper, you can replicate the results with best hyperparameters for each model+dataset combination as below:
 
-| Model | Dataset | Hidden Size | Batch Size | Learning Rate | Weight Decay | Alpha |
-|-------|---------|-------------|------------|---------------|--------------|--------|
-| DeepSeek-R1-Distill-Llama-8B | math-train | 0 | 64 | 1e-5 | 0.001 | 2.0 |
-| DeepSeek-R1-Distill-Llama-8B | aime_83_24 | 0 | 64 | 1e-5 | 0.1 | 0.3 |
-| DeepSeek-R1-Distill-Llama-8B | gsm8k-train | 16 | 64 | 1e-4 | 0.1 | 3.0 |
-| DeepSeek-R1-Distill-Llama-8B | knowlogic-train | 0 | 64 | 1e-5 | 0.1 | 0.7 |
-| DeepSeek-R1-Distill-Qwen-1.5B | math-train | 16 | 64 | 1e-3 | 0.01 | 2.0 |
-| DeepSeek-R1-Distill-Qwen-1.5B | aime_83_24 | 16 | 64 | 1e-5 | 0.01 | 0.5 |
-| DeepSeek-R1-Distill-Qwen-1.5B | gsm8k-train | 16 | 64 | 1e-5 | 0.1 | 2.0 |
-| DeepSeek-R1-Distill-Qwen-1.5B | knowlogic-train | 0 | 64 | 1e-4 | 0.001 | 0.3 |
-| DeepSeek-R1-Distill-Qwen-7B | math-train | 0 | 64 | 1e-4 | 0.1 | 3.0 |
-| DeepSeek-R1-Distill-Qwen-7B | aime_83_24 | 0 | 64 | 1e-3 | 0.1 | 0.9 |
-| DeepSeek-R1-Distill-Qwen-7B | gsm8k-train | 0 | 64 | 1e-4 | 0.1 | 3.0 |
-| DeepSeek-R1-Distill-Qwen-7B | knowlogic-train | 0 | 64 | 1e-5 | 0.1 | 0.9 |
-| DeepSeek-R1-Distill-Qwen-32B | math-train | 0 | 64 | 1e-4 | 0.1 | 2.0 |
-| DeepSeek-R1-Distill-Qwen-32B | aime_83_24 | 0 | 64 | 1e-4 | 0.1 | 0.9 |
-| DeepSeek-R1-Distill-Qwen-32B | gsm8k-train | 16 | 64 | 1e-3 | 0.001 | 3.0 |
-| DeepSeek-R1-Distill-Qwen-32B | knowlogic-train | 0 | 64 | 1e-5 | 0.1 | 0.9 |
-| DeepSeek-R1-Distill-Llama-70B | math-train | 0 | 64 | 1e-4 | 0.001 | 3.0 |
-| DeepSeek-R1-Distill-Llama-70B | aime_83_24 | 0 | 64 | 1e-4 | 0.001 | 2.0 |
-| DeepSeek-R1-Distill-Llama-70B | gsm8k-train | 0 | 64 | 1e-4 | 0.001 | 2.0 |
-| DeepSeek-R1-Distill-Llama-70B | knowlogic-train | 32 | 64 | 1e-3 | 0.01 | 1.0 |
+![](./figures/hyperparam.png)
 
-### 6. Test Probes
+### Test Probes
 
-To test the trained probe on new data. Note that in `src/test_predictor_with_class_weights.py`, we default to use `best_val_acc` as metric for ranking the probes. You can also customize the metric.
+To test your probe on test datase, first follow [data preparation steps](#data-preparation) as above to obtain representation on test data in the same manner. Then evaluate the best trained probe on your test data.
+
+```bash
+model=DeepSeek-R1-Distill-Qwen-1.5B
+data=math-train
+
+TEST_SAVE_PATH=./test_result
+TEST_DATA=./model_embeds/${model}_math_500
+
+python -u ./test_predictor_with_class_weights.py \
+    --input_size $INPUT_SIZE \
+    --threshold 0.5 \
+    --test_data_dir $TEST_DATA \
+    --save_path $TEST_SAVE_PATH \
+    --model_name $model \
+    --checkpoint_model_path /path/to/best/probe/pt 
+```
+
+We also provide script to automatically run evaluation on top-k best trained probes in grid search.
+Note that in [`src/test_predictor_with_class_weights.py`](./src/test_predictor_with_class_weights.py), we default to use `best_val_acc` as metric for ranking the probes. You can also customize the metric by yourself.
 
 ```bash
 model=DeepSeek-R1-Distill-Qwen-1.5B
@@ -218,7 +193,6 @@ GRID_SEARCH_PATH=$MODEL_BASE_PATH/grid_search_result.jsonl
 TEST_SAVE_PATH=$MODEL_BASE_PATH/test_result
 
 TEST_DATA=./model_embeds/${model}_math_500
-echo "Running test_predictor_with_class_weights.py with model $MODEL_BASE_PATH and data $TEST_DATA"
 python -u ./test_predictor_with_class_weights.py \
     --input_size $INPUT_SIZE \
     --threshold 0.5 \
@@ -228,37 +202,11 @@ python -u ./test_predictor_with_class_weights.py \
     --save_path $TEST_SAVE_PATH \
     --model_name $model
 ```
-- To test a single probe instead of over grid search sweeps:
 
-```bash
-model=DeepSeek-R1-Distill-Qwen-1.5B
-data=math-train
-
-MODEL_BASE_PATH=./grid_search/${model}_${data}
-GRID_SEARCH_PATH=$MODEL_BASE_PATH/grid_search_result.jsonl
-TEST_SAVE_PATH=$MODEL_BASE_PATH/test_result
-
-TEST_DATA=./model_embeds/${model}_math_500
-echo "Running test_predictor_with_class_weights.py with model $MODEL_BASE_PATH and data $TEST_DATA"
-python -u ./test_predictor_with_class_weights.py \
-    --input_size $INPUT_SIZE \
-    --threshold 0.5 \
-    --test_data_dir $TEST_DATA \
-    --save_path $TEST_SAVE_PATH \
-    --model_name $model \
-    --checkpoint_model_path /path/to/saved/single/pt/file 
-```
-
-## Notes
-
-1. The pipeline is designed to process large datasets efficiently using multiprocessing
-2. Intermediate results are saved after each step for reproducibility
-3. For large models or long inputs, adjust batch size and chunk size based on available GPU memory
-4. The Gemini API key is required for the labeling step
 
 ## Citation
 
-If you find this code useful for your research, please cite our paper:
+If you find our code or data useful, please cite our paper:
 ```bibtex
 @misc{zhang2025reasoningmodelsknowtheyre,
       title={Reasoning Models Know When They're Right: Probing Hidden States for Self-Verification}, 
