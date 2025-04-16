@@ -52,7 +52,7 @@ python -m spacy download en_core_web_sm
 
 ### Data Preparation
 #### 1. Generate CoT Reasoning
-Generate Chain-of-Thought reasoning for each example in your dataset.
+Generate Chain-of-Thought reasoning for each example in your dataset. We provide generated CoTs in [`./initial_cot`](./initial_cot).
 
 ```bash
 # Set model path
