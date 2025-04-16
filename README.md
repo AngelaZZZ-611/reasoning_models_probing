@@ -45,7 +45,7 @@ python -m spacy download en_core_web_sm
     - the downloaded file contains a series of trained probe `pt` file.
     - the naming of each `pt` file follows `{model_name}_{train_data}_best_probe-{hyperparam_setting}.pt`
 - If you want to use the probe off-the-shelf on other data, we recommend using the probe trained on **MATH** data as they usually show better generalizability.
-- See for how to [prepare your own test data](#data-preparation) and how to [evaluate the probe](#test-probes). 
+- See below for how to [prepare your own test data](#data-preparation) and how to [evaluate the probe](#test-probes). 
 
 
 ## 🚀 Train Your Own Probe
