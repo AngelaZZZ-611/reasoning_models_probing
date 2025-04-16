@@ -1,4 +1,4 @@
-# Reasoning Models Know When They're Right: Probing Hidden States for Self-Verification
+<h1 align="center">Reasoning Models Know When They're Right</h1>
 
 
 <div align="center">
@@ -12,7 +12,7 @@ Official code for ["Reasoning Models Know When They're Right: Probing Hidden Sta
 
 ![](./figures/main.png)
 
-## Table of Contents
+## 🔖 Table of Contents
 
 
 - [Setup and Requirements](#setup-and-requirements)
@@ -25,7 +25,7 @@ Official code for ["Reasoning Models Know When They're Right: Probing Hidden Sta
 
 
 
-## Setup and Requirements
+## 🔧 Setup and Requirements
 
 ```bash
 conda create -n probe
@@ -35,7 +35,7 @@ pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-## Download Trained Probes
+## ⬇️ Download Trained Probes
 - We provide trained probes for different model and dataset combinations. You can download them [here](https://drive.usercontent.google.com/download?id=140GPBMca27-hAL5P8phK_jl2O9mReqo8&export=download&authuser=1&confirm=t&uuid=2302ab95-eb89-444e-aeed-8738a2c1d8b2&at=APcmpoyoq2GkpsrhGUK9W6EpyYoO:17446852776).
     - the downloaded file contains a series of trained probe `pt` file.
     - the naming of each `pt` file follows `{model_name}_{train_data}_best_probe-{hyperparam_setting}.pt`
@@ -43,7 +43,7 @@ python -m spacy download en_core_web_sm
 - See for how to [prepare your own test data](#data-preparation) and how to [evaluate the probe](#test-probes). 
 
 
-## Train Your Own Probe
+## 🚀 Train Your Own Probe
 
 ### Data Preparation
 #### 1. Generate CoT Reasoning
@@ -198,7 +198,7 @@ python -u ./test_predictor_with_class_weights.py \
 ```
 
 
-## Citation
+## 📝 Citation
 
 If you find our code or data useful, please cite our paper:
 ```bibtex
