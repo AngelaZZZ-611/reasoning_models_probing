@@ -3,7 +3,7 @@
 
 <div align="center">
   
-[📄 Paper](https://arxiv.org/pdf/2504.05419) | [Model](https://drive.usercontent.google.com/download?id=140GPBMca27-hAL5P8phK_jl2O9mReqo8&export=download&authuser=1&confirm=t&uuid=2302ab95-eb89-444e-aeed-8738a2c1d8b2&at=APcmpoyoq2GkpsrhGUK9W6EpyYoO:17446852776) | [🤗 Data]()
+📄 [Paper](https://arxiv.org/pdf/2504.05419) | 🔗 [Model](https://drive.usercontent.google.com/download?id=140GPBMca27-hAL5P8phK_jl2O9mReqo8&export=download&authuser=1&confirm=t&uuid=2302ab95-eb89-444e-aeed-8738a2c1d8b2&at=APcmpoyoq2GkpsrhGUK9W6EpyYoO:17446852776) | 🤗 [Data (Coming soon)]()
 
 </div>
 
