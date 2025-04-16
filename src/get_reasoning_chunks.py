@@ -85,7 +85,7 @@ def run_segmentation(args_dict):
         # store results
         res = {}
         for i, chunk in enumerate(chunks, 1):
-            res[i] = chunk
+            res[str(i)] = chunk
         profile[key] = res
     
     # Save the result for this chunk

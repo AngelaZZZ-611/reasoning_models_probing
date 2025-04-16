@@ -91,16 +91,21 @@ def split_data_for_parallel(data_file, num_chunks):
     
     return chunks
 
+def valid_label(res, length):
+    if res is None:
+        return False
+    for label in res:
+        if int(label["id"]) > length or int(label["id"]) < 1:
+            return False
+    return True
+    
+
 def single_process(args_dict):
     """Process a single chunk of data."""
     args = args_dict['args']
     chunk_id = args_dict['chunk_id']
     id2ans = args_dict['id2ans']
     id2reasoning = args_dict['id2reasoning']
-    assert len(id2ans) == len(id2reasoning), "Length of id2ans and id2reasoning do not match"
-    assert not set(id2reasoning.keys()).difference(set(id2ans.keys())), print(set(id2reasoning.keys()).difference(set(id2ans.keys())))
-
-    # load model
     api_key = os.getenv("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
     # process prompt and run LLM
@@ -110,7 +115,7 @@ def single_process(args_dict):
         gt_answer = id2ans[str(k)]
         out_res = run_LLM(args, client, reasoning_trace, gt_answer)
         out_res = process_json_output(out_res.text)
-        if out_res is None:
+        if not valid_label(out_res, len(reasoning_trace)):
             print(f"Error processing output for {k}")
             continue
         results[k] = out_res
@@ -122,18 +127,22 @@ def merge_reasoning_chunks(reasoning_chunks, labels):
     # labels: list[dict]
     # return: list[str], list[dict]
     # merge reasoning chunks to make sure each new chunk has a label[correctness] that is not None
-    assert len(reasoning_chunks) == len(labels), "Length of reasoning chunks and labels do not match"
-    current_chunk = []
     all_merged_reasoning_chunks = []
     all_merged_labels = []
     labels = sorted(labels, key=lambda x: int(x["id"]))
+    prev_idx = 1  # start from 1
     for label in labels:
-        current_chunk.append(reasoning_chunks[label["id"]])
         if label["correctness"] is not None:
+            new_idx = int(label["id"]) + 1
+            current_chunk = []
+            for i in range(prev_idx, new_idx):
+                current_chunk.append(reasoning_chunks[str(i)])
+
             all_merged_reasoning_chunks.append("\n\n".join(current_chunk))
             label.pop("id")
             all_merged_labels.append(label)
-            current_chunk = []
+            prev_idx = new_idx
+    assert len(all_merged_reasoning_chunks) == len(all_merged_labels), f"Length of reasoning chunks and labels do not match, reasoning_chunks: {len(all_merged_reasoning_chunks)}, labels: {len(all_merged_labels)}"
     return all_merged_reasoning_chunks, all_merged_labels
 
 
@@ -147,7 +156,6 @@ def main():
                         help='temperature setup for generation, the larger the diversity. ')
     parser.add_argument('--num_processes', type=int, default=None, help='Number of processes to use. Defaults to number of CPU cores.')
     parser.add_argument('--num_chunks', type=int, default=None, help='Number of chunks to split the data into. Defaults to number of processes.')
-    parser.add_argument('--delete_chunks', action='store_true', help='Delete individual chunk files after merging.')
     parser.add_argument('--skip_merge', action='store_true', help='Skip merging the chunk files.')
     args = parser.parse_args()
 
@@ -164,24 +172,24 @@ def main():
     id2reasoning = {str(k): v for k, v in id2reasoning.items()}
     print(len(id2reasoning))
 
-    id2ans_chunks = split_data_for_parallel(id2ans, num_chunks)
+    # id2ans_chunks = split_data_for_parallel(id2ans, num_chunks)
     id2reasoning_chunks = split_data_for_parallel(id2reasoning, num_chunks)
 
     process_args = []
-    for i, (id2ans_chunk, id2reasoning_chunk) in enumerate(zip(id2ans_chunks, id2reasoning_chunks)):
+    for i, id2reasoning_chunk in enumerate(id2reasoning_chunks):
         process_args.append({
             'args': args,
             'chunk_id': i,
-            'id2ans': id2ans_chunk,
+            'id2ans': id2ans,
             'id2reasoning': id2reasoning_chunk
         })
 
     # single_process(process_args[0])
     # return
     # Run processing in parallel
+    print("Processing in parallel...")
     with Pool(processes=args.num_processes) as pool:
         results = pool.map(single_process, process_args)
-    
     # Print results
     all_res = {}
     for result in results:
@@ -192,8 +200,8 @@ def main():
     # process results
     id2data = load_id2data(args.raw_CoT_path)
     labeled_data = {}
-    for k in all_res:
-        reasoning_chunks, labels = merge_reasoning_chunks(id2reasoning[k], all_res[k]['labels'])
+    for k in tqdm(all_res, desc="merging chunks"):
+        reasoning_chunks, labels = merge_reasoning_chunks(id2reasoning[k], all_res[k])
         labeled_data[k] = {
             "id": k,
             "question": id2data[k]['instruction'],
@@ -203,21 +211,10 @@ def main():
         }
         
     # save labeled data
-    with open(f'{args.save_path}/labeled_intermediate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}.jsonl', 'w') as f:
+    with open(f'{args.save_path}/labeled_intermediate_answers_{os.path.basename(args.raw_CoT_path)}', 'w') as f:
         for k in labeled_data:
             f.write(json.dumps(labeled_data[k], ensure_ascii=False) + "\n")
-    # Save results
-    # torch.save(all_res, f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_merged.pt')
 
-    # remove the intermediate chunk files
-    # if args.delete_chunks:
-    #     for i in range(num_chunks):
-    #         try:
-    #             file_ = f'{args.save_path}/labeled_intermidiate_answers_{os.path.basename(args.raw_CoT_path).strip(".jsonl")}_chunk_{i}.pt'
-    #             os.remove(file_)
-    #         except Exception as e:
-    #             print(f"Error deleting chunk file {i}: {e}")
-    # print("All done!")
 
     
 

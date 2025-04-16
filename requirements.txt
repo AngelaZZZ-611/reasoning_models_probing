@@ -5,5 +5,7 @@ spacy
 vllm
 transformers
 tqdm
-google-genai 
+google-genai # required if use Gemini API to label data
 bitsandbytes
+accelerate
+scikit-learn

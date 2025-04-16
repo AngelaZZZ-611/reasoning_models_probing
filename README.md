@@ -28,9 +28,11 @@ Official code for ["Reasoning Models Know When They're Right: Probing Hidden Sta
 ## Setup and Requirements
 
 ```bash
-# Install required packages
-pip install vllm transformers torch bitsandbytes
-pip install google-genai  # For labeling with Gemini API
+conda create -n probe
+conda activate probe
+pip install -r requirements.txt
+# download module for spacy (required for segmenting reasoning chunks)
+python -m spacy download en_core_web_sm
 ```
 
 ## Download Trained Probes
@@ -108,17 +110,17 @@ Extract hidden state representations for each reasoning chunk. Note that to save
 model_name=DeepSeek-R1-Distill-Qwen-1.5B
 model_path=/path/to/your/model/$model_name
 dataset=math-train
-base_name=${model_name}_${dataset}_rollout_temperature0.6
-
-# Generate embeddings in chunks
-for chunk_id in {1..50}; do
-    python -u src/get_representation.py \
-        --base_name $base_name \
-        --model_name $model_path \
-        --save_path "./model_embeds/${model_name}_${dataset}" \
-        --bs 64 \
-        --chunk_id $chunk_id \
-        --chunk_size 200
+temperature=0.6
+input_file=./labeled_cot/labeled_intermediate_answers_${model_name}_${dataset}_rollout_temperature${temperature}.jsonl
+for file_id in {0..19}
+do
+python -u src/get_representation.py \
+    --input_file $input_file \
+    --model_name $model_path \
+    --save_path ./model_embeds/${model_name}_${dataset} \
+    --bs 16 \
+    --file_id $file_id \
+    --file_size 50 # file size measured by number of questions, should not be too large because that would affect training data shuffling
 done
 ```
 ### Train Probes

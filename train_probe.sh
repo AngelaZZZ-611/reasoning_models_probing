@@ -6,7 +6,7 @@ for lr in 1e-3 1e-4 1e-5; do
         for wd in 0.001 0.01 0.1; do
             for alpha in 0.3 0.5 0.7 0.9 1.0 1.5 2.0 3.0; do
                 echo "Running with --lr $lr --hidden_size $hidden_size --wd $wd --alpha_imbalance_penalty $alpha"
-                python -u ./train_predictor_with_class_weights.py \
+                python -u src/train_predictor_with_class_weights.py \
                     --batch_size 64 \
                     --epochs 200 \
                     --lr "$lr" \
