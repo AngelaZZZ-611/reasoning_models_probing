@@ -162,7 +162,7 @@ For data and models used in our paper, you can replicate the results with best h
 
 ### Test Probes
 
-To test your probe on test datase, first follow [data preparation steps](#data-preparation) as above to obtain representation on test data in the same manner. Then evaluate the best trained probe on your test data.
+To test your probe on test data, first follow [data preparation steps](#data-preparation) as above to obtain representations on test data in the same manner. Then evaluate the best trained probe on your test data.
 
 ```bash
 model=DeepSeek-R1-Distill-Qwen-1.5B
