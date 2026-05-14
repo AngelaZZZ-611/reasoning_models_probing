@@ -3,7 +3,6 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from sklearn.metrics import brier_score_loss
-from constant import BEST_SETTING
 import os
 from tqdm import tqdm
 
@@ -89,42 +88,4 @@ def process_file(file_path):
         **correctness_metrics,
         **other_metrics
     }
-if __name__ == "__main__":
-    TEST_DATASET = [
-        "math_500",
-        "aime_25",
-        "gsm8k-test",
-        "knowlogic-test",
-        "gpqa_diamond"
-    ]
-    test_result = []
-    for model in BEST_SETTING:
-        for dataset in tqdm(BEST_SETTING[model]):
-            print("setting:", model, dataset, BEST_SETTING[model][dataset])
-            for test_dataset in TEST_DATASET:
-                if "llama-8b" in model.lower() and "gsm8k" in test_dataset:
-                    test_dataset += "-anqi"
-                # print(test_dataset)
-                file_path = f"{model}_{dataset}_by_batch/test_result/res-{model}_{test_dataset}-best_model_weightedloss_e200-{BEST_SETTING[model][dataset]}-thres0.5-s42.pt"
-                if not os.path.exists(file_path):
-                    file_path = f"{model}_{dataset}/test_result/res-{model}_{test_dataset}-best_model_weightedloss_e200-{BEST_SETTING[model][dataset]}-thres0.5-s42.pt"
-                
-                if not os.path.exists(file_path):
-                    file_path = f"{model}_{dataset}/test_result/res-{model}_{test_dataset}-best_model_weightedloss_e200-{BEST_SETTING[model][dataset]}-thres0.5-s42-nq1000.pt"
-                    if not os.path.exists(file_path):
-                        print(f"file not found: {file_path}")
-                        continue
-                # if not os.path.exists(file_path):
-                #     file_path = f"{model}_{dataset}/test_result/res-{model}_{test_dataset}-anqi-best_model_weightedloss_e200-{BEST_SETTING[model][dataset]}-thres0.5-s42-nq1000.pt"
-                metrics = process_file(file_path)
-                test_result.append({
-                    "model": model,
-                    "train_dataset": dataset,
-                    "test_dataset": test_dataset,
-                    "param_setting": BEST_SETTING[model][dataset],
-                    **metrics
-                })
 
-    import pandas as pd
-    df = pd.DataFrame(test_result)
-    df.to_csv("test_result_summary_new.csv", index=False, float_format='%.5f')
